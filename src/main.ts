@@ -4,7 +4,7 @@ import {ValidationPipe} from "@nestjs/common";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  //VALIDACAO PRA REQUISICAO
+  //VALIDACAO PRA REQUISICAO D
   //WHITE LIST SO VAI PASSAR O QUE TIVER NO OBJETO VALIDATOR
   //O forbid not white faz o seguinte se encontrar algo(um campo a mais por exemplo na requisicao post) Ele vai
   // dar uma MENSAGEM DE ERRO,
