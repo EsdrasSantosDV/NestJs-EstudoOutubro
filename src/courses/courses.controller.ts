@@ -1,5 +1,7 @@
 import {Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Res} from '@nestjs/common';
 import {CoursesService} from "./courses.service";
+import {CreateCourseDto} from "./dto/create-course.dto";
+import {UptadeCourseDto} from "./dto/uptade-course.dto";
 //ENDPOINT DA REQUISITION
 // @ts-ignore
 // @ts-ignore
@@ -12,33 +14,32 @@ export class CoursesController {
     }
 
     @Get()
-    findAll(@Res() response){
-        return response.status(200).send('Listagem de Cursos');
+    findAll(){
+        return this.coursesService.findAll();
     }
 
 
     @Get(':id')
-    findOne(@Param() params){
-        return `Curso #${params.id}`;
+    findOne(@Param('id') id:string){
+        return this.coursesService.findOne(id);
     }
 
     @Post()
-    @HttpCode(HttpStatus.NO_CONTENT)
-    create(@Body() body)
+    create(@Body() createCourseDto: CreateCourseDto)
     {
-        return body;
+        return this.coursesService.create(createCourseDto);
     }
 
     //PATCH SO ATUALIZA UMA PARTE DO CONTEUDO ,PUT ATUALIZA TODO
     @Patch(':id')
-    update(@Param('id') id:string,@Body() body)
+    update(@Param('id') id:string,@Body()uptadeCourseDto:UptadeCourseDto)
     {
-        return `Àtualizacao do Curso #${id}`;
+        return this.coursesService.uptade(id,uptadeCourseDto);
     }
 
     @Delete(':id')
-    remove(@Param() params){
-        return `Exclusao do Curso #${params.id}`;
+    remove(@Param('id')id:string){
+        return this.coursesService.delete(id);
     }
 
 
