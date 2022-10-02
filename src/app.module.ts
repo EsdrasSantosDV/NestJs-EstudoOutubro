@@ -17,6 +17,8 @@ import {TypeOrmModule} from "@nestjs/typeorm";
     autoLoadEntities:true,
     synchronize:true,
   })],
+  //VAI CARREGAR AUTOMATICMAENTE AS ENTIDADES E SICRONIZAR
+  //EM PRODUÇÃO DEVERA RETIRAR O SYNCHRONIZE PRA NÃO PERDER OS DADOS
   controllers: [AppController],
   providers: [AppService],
 })

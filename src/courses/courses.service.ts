@@ -1,59 +1,108 @@
-import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
+import {HttpException, HttpStatus, Injectable, NotFoundException} from '@nestjs/common';
 import {Course} from "./entities/course.entity";
+import {getDataSourceToken, InjectRepository} from "@nestjs/typeorm";
+import {Repository} from "typeorm";
+import {CreateCourseDto} from "./dto/create-course.dto";
+import {create} from "domain";
+import {UptadeCourseDto} from "./dto/uptade-course.dto";
+import {Tag} from "./entities/tag.entity";
 
 @Injectable()
 export class CoursesService {
-    private courses:Course[]=[
-        {
-            id:1,
-            name:"Fundamentos de matematica",
-            description:"MATEMATICA APLICADA",
-            tags:['node.js','nestjs','javascript'],
-        },
-    ];
+
+    //INJETA O REPOSITORY NO SERVIÇO, PODEMOS CRIAR TBM DE FORMA MANUAL
+    constructor(
+        @InjectRepository(Course) private readonly coursesrepository:Repository<Course>,
+        //PRECISAMOS MANIPULAR TBM AS TAGS
+        @InjectRepository(Tag) private readonly tagrepository:Repository<Tag>
+    ) {
+    }
 
     findAll()
     {
-        return this.courses;
+        //FIND SERIA O FIND ALL DO QUARKUS
+        return this.coursesrepository.find({
+            relations:['tags'],
+        });
     }
     findOne(id:string)
     {
-       const course= this.courses.find((course:Course)=> course.id ===Number(id));
+       const course= this.coursesrepository.findOne(id,{
+           relations:['tags'],
+       });
        if(!course)
        {
            //PRIMEIRO PARAMETRO E  A MENSAGEM,
-           throw new HttpException(`Course id ${id} Not Found`,HttpStatus.NOT_FOUND);
+           throw new NotFoundException(`Course id ${id} Not Found`);
        }
        return course;
     }
 
-    create(createCourseDto:any)
+    async create(createCourseDto:CreateCourseDto)
     {
-        this.courses.push(createCourseDto);
-        return createCourseDto;
+        //PRIMEIRO CRIA O OBJETO E DEPOIS SALVA
+        //ESSE METODO SO VAI REOTRNAR QUANDO PROCESSAR TODAS AS PROMESSAS
+        //TODAS AS TAGS QUE FORAM ENVIADAS VAI VERIFICAR UMA POR UMA E MANDNADO SEU NOME
+        //E A CADA TAG ELE VAI VERIFICAR SE ESSA TAG EXISTE E SE NÃO EXISTIR ELA CRIA
+        const tags=await Promise.all(
+            createCourseDto.tags.map((name)=>this.preloadTagByName(name)),
+        );
+        const course=this.coursesrepository.create({
+            ...createCourseDto,
+            tags,//ESSE TAG VAI SER INCLUIDO PQ TALVEZ ALGUMA TAG NÃO TENHA SIDO ANTEIORMENTE CRIADA
+        });
+        console.log(course);
+        return this.coursesrepository.save(course);
     }
 
-    uptade(id:string,uptadeCourseDto:any)
+    async uptade(id:string,uptadeCourseDto:UptadeCourseDto)
     {
+        //verificar se existe uma tag
+        const tags=uptadeCourseDto.tags && (
+          await Promise.all(uptadeCourseDto.tags.map((name)=> this.preloadTagByName(name)),)
+        );
 
-        const indexCourse=this.courses.findIndex((course:Course)=>course.id===Number(id));
-        this.courses[indexCourse]=uptadeCourseDto;
+        //SE ELE CONSEGUIR ENCONTRAR UM REGISTRO COM ESSE ID
+        //E PREPARAR ESSES DADOS
 
-    }
 
-    delete(id:string)
-    {
+        const course=await this.coursesrepository.preload({
+          id:+id,
+          ...uptadeCourseDto,
+          tags,
+        });
 
-        const indexCourse=this.courses.findIndex((course:Course)=>course.id===Number(id));
-        if(indexCourse>=0)
+        if(!course)
         {
-            //SPLICE EXCLUI
-            this.courses.splice(indexCourse);
+            throw new NotFoundException(`Course id ${id} Not Found`);
         }
 
+        return this.coursesrepository.save(course);
     }
 
+    async delete(id:string)
+    {
+        const course = await this.coursesrepository.findOne(id);
+        if(!course)
+        {
+            throw new NotFoundException(`Course id ${id} Not Found`);
+        }
 
+        return this.coursesrepository.remove(course);
+    }
+
+    private async preloadTagByName(name:string):Promise<Tag>
+    {
+        const tag=await this.tagrepository.findOne({name});
+        //SE JA EXISTE A TAG
+        if(tag)
+        {
+            return tag;
+        }
+        //SE NÃO EXISTE CRIA ELA
+        return this.tagrepository.create({name});
+
+    }
 
 
 
